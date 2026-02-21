@@ -13,6 +13,7 @@ import {
   CreditCard,
   FileText,
   LifeBuoy,
+  Zap,
 } from "lucide-react"
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const navMain = [
 
 const navManage = [
   { title: "SDK Management", href: "/sdk-management", icon: AppWindow },
+  { title: "API Integration", href: "/integration", icon: Zap },
   { title: "Webhooks & Events", href: "/webhooks", icon: Webhook },
   { title: "Analytics", href: "/analytics", icon: BarChart3 },
 ]

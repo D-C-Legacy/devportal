@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react"
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import {
   type Organization,
   type Application,
@@ -15,6 +15,7 @@ import {
   billingPlans as initialBillingPlans,
   type BillingPlan,
 } from "./mock-data"
+import { fetchApplications } from "./api-service"
 
 export type Environment = "sandbox" | "production"
 
@@ -67,6 +68,27 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [steps, setSteps] = useState<GettingStartedStep[]>(defaultGettingStartedSteps)
   const [plans, setPlans] = useState<BillingPlan[]>(initialBillingPlans)
   const [theme, setTheme] = useState<"light" | "dark">("light")
+  const [appsLoaded, setAppsLoaded] = useState(false)
+
+  // Load applications from API on mount
+  useEffect(() => {
+    const loadApps = async () => {
+      try {
+        console.log("[DashboardProvider] Loading applications from API...")
+        const apiApps = await fetchApplications()
+        if (apiApps && apiApps.length > 0) {
+          console.log("[DashboardProvider] Loaded", apiApps.length, "apps from API")
+          setApps(apiApps)
+        }
+      } catch (error) {
+        console.log("[DashboardProvider] Using mock apps (API not available)")
+      } finally {
+        setAppsLoaded(true)
+      }
+    }
+
+    loadApps()
+  }, [])
 
   const addApp = useCallback((app: Application) => {
     setApps((prev) => [app, ...prev])

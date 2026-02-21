@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Activity, AlertTriangle, AppWindow, Clock, TrendingUp, Zap } from "lucide-react"
+import { Activity, AlertTriangle, AppWindow, Clock, TrendingUp, Zap, Loader2 } from "lucide-react"
 import {
   LineChart,
   Line,
@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDashboard } from "@/lib/store"
-import { getAggregatedMetrics } from "@/lib/mock-data"
+import { useMetrics } from "@/hooks/use-metrics"
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
@@ -28,11 +28,9 @@ function formatNumber(n: number): string {
 
 export default function OverviewPage() {
   const { apps } = useDashboard()
-  const [range, setRange] = useState<"24h" | "7d" | "30d">("30d")
+  const { metrics, loading, error, range, setRange } = useMetrics()
 
-  const metrics = useMemo(() => getAggregatedMetrics(range), [range])
-
-  const kpis = [
+  const kpis = metrics ? [
     {
       title: "Total Requests",
       value: formatNumber(metrics.totalRequests),
@@ -75,7 +73,7 @@ export default function OverviewPage() {
       icon: Zap,
       trend: "+15.2%",
     },
-  ]
+  ] : []
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,35 +86,68 @@ export default function OverviewPage() {
         </div>
         <Tabs value={range} onValueChange={(v) => setRange(v as "24h" | "7d" | "30d")}>
           <TabsList>
-            <TabsTrigger value="24h">24h</TabsTrigger>
-            <TabsTrigger value="7d">7d</TabsTrigger>
-            <TabsTrigger value="30d">30d</TabsTrigger>
+            <TabsTrigger value="24h" disabled={loading}>24h</TabsTrigger>
+            <TabsTrigger value="7d" disabled={loading}>7d</TabsTrigger>
+            <TabsTrigger value="30d" disabled={loading}>30d</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
+      {/* Loading State */}
+      {loading && !metrics && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="h-7 w-32 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-destructive">Error Loading Metrics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <p className="text-xs text-muted-foreground mt-2">Using mock data. Make sure NEXT_PUBLIC_API_BASE_URL is configured.</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {kpis.map((kpi) => (
-          <Card key={kpi.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
-              <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-muted-foreground">{kpi.description}</p>
-                <span className="text-xs font-medium text-chart-2">{kpi.trend}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {metrics && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {kpis.map((kpi) => (
+            <Card key={kpi.title}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {kpi.title}
+                </CardTitle>
+                <kpi.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-muted-foreground">{kpi.description}</p>
+                  <span className="text-xs font-medium text-chart-2">{kpi.trend}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Charts */}
+      {metrics && (
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -276,6 +307,7 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   )
 }
